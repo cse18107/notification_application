@@ -11,12 +11,10 @@ app.use(express.json());
 
 connectDatabase();
 
-
 const publicVapidKey =
   "BErT8yw_oZTyNwR1ZlmTcgURTCnfVyOWMw0YvQBOGc8WsH1Cc6bBM3GRCUbLjExUaGBSXnntzz6RLlaBdcWyS8s";
 
 const privateVapidKey = "sFo79ntrv2XrB-UVDVdDhHl-CfPAyNj0FbhKyfhP4Ms";
-
 
 webpush.setVapidDetails(
   "mailto:test@test.com",
@@ -24,19 +22,23 @@ webpush.setVapidDetails(
   privateVapidKey
 );
 
-
 app.post("/api/persons", async (req, res) => {
-  const user = await User.findOne({_id:req.body.id});
+  try {
+    const user = await User.findOne({ _id: req.body.id });
 
-  const persons = await Person.find({userId:user._id});
-  res.status(201).json({
-    success: "success",
-    message: "Working properly",
-    data: {
-      persons,
-    },
-  });
-
+    const persons = await Person.find({ userId: user._id });
+    res.status(201).json({
+      success: "success",
+      message: "Working properly",
+      data: {
+        persons,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
 });
 
 app.post("/api/signup", async (req, res) => {
@@ -87,34 +89,42 @@ app.post("/api/login", async (req, res) => {
 });
 
 app.post("/api", async (req, res) => {
-  const data = req.body;
-  const user = await User.findOne({ email: data.email });
-  console.log(data);
-  console.log(user);
+  try {
+    const data = req.body;
+    const user = await User.findOne({ email: data.email });
+    console.log(data);
+    console.log(user);
 
-  const subscription = user.subscription;
+    const subscription = user.subscription;
 
-  const response = await Person.create({
-    name: data.name,
-    address: data.address,
-    age: data.age,
-    userId: user._id,
-  });
+    const response = await Person.create({
+      name: data.name,
+      address: data.address,
+      age: data.age,
+      userId: user._id,
+    });
 
-  res.status(201).json({
-    message: "data successfully inserted",
-    data: { response },
-  });
+    res.status(201).json({
+      message: "data successfully inserted",
+      data: { response },
+    });
 
-  const payload = JSON.stringify({ title: user.name });
+    const payload = JSON.stringify({ title: user.name });
 
-  // Pass object into sendNotification
-  webpush
-    .sendNotification(subscription, payload)
-    .catch(err => console.error(err));
+    // Pass object into sendNotification
+    webpush
+      .sendNotification(subscription, payload)
+      .catch((err) => console.error(err));
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+
 
 });
 
-app.listen(4500, () => {
+app.listen(process.env.PORT || 4500, () => {
   console.log("Server is working on port 4500");
 });
